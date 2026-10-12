@@ -7,12 +7,14 @@
       ".firebaserc",
       "schema.sql",
       "README.md",
-      "**/.*"
+      "**/.*",
+      "auth-gate.html",
+      "firebase-debug.log"
     ],
     "cleanUrls": true,
     "headers": [
       {
-        "source": "**/*.@(js|html)",
+        "source": "**/*.@(js|html|css)",
         "headers": [
           {
             "key": "Cache-Control",
