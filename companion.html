@@ -222,7 +222,7 @@ function sendOrder(how){if(!$('oName').value.trim()){toast('Please add your name
 try{const me=JSON.parse(localStorage.getItem('bliss-order-me'));if(me){$('oName').value=me.n||'';$('oMobile').value=me.m||'';$('oLoc').value=me.l||''}}catch(e){}
 if(state.plan.strength)setChip($('oKit'),state.plan.strength);
 
-render();if(location.hash==='#order'||sessionStorage.getItem('bliss-open')==='order'){sessionStorage.removeItem('bliss-open');go('order')}else if(!state.plan.start)go('plan');
+render();if(location.hash==='#order'||sessionStorage.getItem('bliss-open')==='order'){sessionStorage.removeItem('bliss-open');const nt=sessionStorage.getItem('bliss-note');if(nt){$('oNotes').value=nt;sessionStorage.removeItem('bliss-note')}go('order')}else if(!state.plan.start)go('plan');
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="config.js?v=4"></script><script src="auth.js?v=4"></script>
 </body></html>
