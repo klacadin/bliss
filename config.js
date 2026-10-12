@@ -1,4 +1,8 @@
-// Fill in the public Project URL and publishable/anon key from Supabase > Project Settings > API.
-// Never paste your service_role key here.
-window.BLISS_SUPABASE_URL = '';
-window.BLISS_SUPABASE_ANON_KEY = '';
+// Paste your Firebase web app config from Firebase Console > Project settings > Your apps > SDK setup (Config).
+// These values are public by design; security comes from firestore.rules.
+window.BLISS_FIREBASE_CONFIG = {
+  apiKey: '',
+  authDomain: '',
+  projectId: '',
+  appId: ''
+};
