@@ -49,6 +49,8 @@ dialog::backdrop{background:#1f2a2499}
    <div class="card" id="teamCard" hidden><h2>Sales team</h2><p class="small muted">Everyone here sees and edits the same orders.</p><div id="teamList"></div>
     <details><summary>Add a salesperson</summary><ol class="small" style="padding-left:18px;margin:8px 0"><li>Send them this link: <b>bliss-3f5b2.web.app/sales-desk</b></li><li>They tap <b>Create an account</b> and confirm their email.</li><li>They sign in, copy the code they see, and send it to you.</li></ol>
     <label class="f">Their name<input id="tName" placeholder="e.g. Joy"></label><label class="f">Their code<input id="tUid" placeholder="Paste the code here" autocomplete="off"></label><button class="block" onclick="addMember()">Add to team</button></details></div>
+   <div class="card"><div class="row between"><h2>Stock on hand</h2><span class="small muted">Goes down when an order is dispatched</span></div><div id="stock" class="grid2" style="grid-template-columns:repeat(3,1fr);margin-top:10px"></div>
+    <details><summary>Received new stock</summary><span class="lbl">Kit</span><div class="chips" id="rcvKit"><button type="button" data-v="10" class="on">10 mg</button><button type="button" data-v="20">20 mg</button><button type="button" data-v="30">30 mg</button></div><label class="f">How many kits arrived<input id="rcvQty" type="number" inputmode="numeric" min="1" placeholder="e.g. 10"></label><button class="block" onclick="receiveStock()">Add to stock</button></details></div>
    <div class="card"><h2>Kit prices</h2><p class="small muted">Used to fill in order totals automatically.</p>
     <div class="grid2" style="grid-template-columns:1fr 1fr 1fr"><label class="f">10 mg (₱)<input id="price10" type="number" inputmode="numeric" min="0"></label><label class="f">20 mg (₱)<input id="price20" type="number" inputmode="numeric" min="0"></label><label class="f">30 mg (₱)<input id="price30" type="number" inputmode="numeric" min="0"></label></div>
     <button class="block" onclick="savePrices()">Save prices</button></div>
@@ -86,7 +88,7 @@ const addDays=(s,n)=>{const d=D(s);d.setDate(d.getDate()+n);return d.toLocaleDat
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STATUSES=['Inquiry','Confirmed','Paid','Dispatched','Delivered','Cancelled'];
 const fields=['date','status','name','mobile','location','strength','qty','needBy','reorder','total','paid','channel','notes'];
-let db={prices:{},orders:[]},editing=null,filter='open';
+let db={prices:{},orders:[],stock:{}},editing=null,filter='open';
 let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400)}
 function chipGroup(box,onPick){box.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;box.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));onPick&&onPick(b.dataset.v)})}
 const chipVal=id=>{const b=$(id).querySelector('button.on');return b?b.dataset.v:''};
@@ -102,7 +104,7 @@ async function persist(){render();const s=$('sync');
  s.textContent='Saving…';s.className='sync';
  try{await window.blissSaveSales(db);s.textContent='Saved ✓';s.className='sync'}
  catch(e){s.textContent='Not saved · tap to retry';s.className='sync err';s.onclick=persist;toast('Couldn’t save. Check your internet.')}}
-window.blissLoadSales=(data,remote)=>{db={prices:data.prices||{},orders:Array.isArray(data.orders)?data.orders:[]};render()};
+window.blissLoadSales=(data,remote)=>{db={prices:data.prices||{},orders:Array.isArray(data.orders)?data.orders:[],stock:data.stock||{}};render()};
 
 // ---------- money helpers
 const balance=o=>Math.max(0,(+o.total||0)-(+o.paid||0));
@@ -126,20 +128,33 @@ function saveOrder(){const o={};['name','mobile','location','needBy','reorder','
  if(!o.name){toast('Add the client’s name');return $('name').focus()}if(!o.mobile){toast('Add the mobile number');return $('mobile').focus()}
  if(o.total<0||o.paid<0)return toast('Amounts can’t be negative');
  if(!o.date)o.date=iso();o.by=(window.blissUser&&blissUser.email)||'';if(!o.reorder)o.reorder=addDays(o.date,28*o.qty);
- if(editing===null)db.orders.push(o);else db.orders[editing]=o;closeOrder();persist();toast(editing===null?'Order added ✓':'Order updated ✓')}
+ if(editing!==null){const prev=db.orders[editing];if(prev.stockOut)setStock(kitKey(prev),stockOf(kitKey(prev))+(+prev.qty||1))}syncStock(o);if(editing===null)db.orders.push(o);else db.orders[editing]=o;closeOrder();persist();toast(editing===null?'Order added ✓':'Order updated ✓')}
 
 // ---------- quick actions
-function advance(i){const o=db.orders[i],n=nextStatus(o.status);if(!n)return;o.status=n;if(n==='Paid'&&balance(o)>0)o.paid=o.total;persist();toast(o.name+' → '+n)}
+function advance(i){const o=db.orders[i],n=nextStatus(o.status);if(!n)return;o.status=n;syncStock(o);if(n==='Paid'&&balance(o)>0)o.paid=o.total;persist();toast(o.name+' → '+n)}
 function markPaid(i){const o=db.orders[i];o.paid=o.total;if(['Inquiry','Confirmed'].includes(o.status))o.status='Paid';persist();toast('Marked paid ✓')}
-function remove(i){if(confirm('Delete '+db.orders[i].name+'’s order?')){db.orders.splice(i,1);persist()}}
+function remove(i){if(confirm('Delete '+db.orders[i].name+'’s order?')){syncStock(db.orders[i],true);db.orders.splice(i,1);persist()}}
 function message(o,type){const name=(o.name||'there').split(' ')[0],cost=o.total||((+db.prices[(o.strength||'').split(' ')[0]]||0)*(+o.qty||1));
  if(type==='balance')return `Hi ${name}, BLISS here. Friendly reminder: your kit order has a remaining balance of ${fmt(balance(o))}. Let us know when it's convenient. Thank you!`;
  if(type==='reorder')return `Hi ${name}, BLISS here. Your kit may be running low around ${nice(o.reorder)}. Want us to prepare your next one? Reply to confirm and we'll check availability and any prescription requirements. Thank you!`;
  return `Hi ${name}, thank you for your BLISS inquiry! ${cost?'Your '+o.qty+' × '+o.strength+' kit comes to '+fmt(cost)+'. ':''}We'll confirm availability, prescription details, payment and delivery before we proceed.`}
 async function copyMsg(j){const t=$('m'+j).textContent;try{await navigator.clipboard.writeText(t);toast('Message copied ✓')}catch(e){prompt('Copy message',t)}}
 
+
+// ---------- stock
+const LOW=2,kitKey=o=>String(o.strength||'').split(' ')[0];
+chipGroup($('rcvKit'));
+function stockOf(k){return +((db.stock||{})[k])||0}
+function setStock(k,n){db.stock=db.stock||{};db.stock[k]=Math.max(0,n)}
+function bumpStock(k,n){setStock(k,stockOf(k)+n);persist()}
+function receiveStock(){const k=chipVal('rcvKit'),n=parseInt($('rcvQty').value,10);if(!(n>0))return toast('Enter how many kits arrived');setStock(k,stockOf(k)+n);$('rcvQty').value='';persist();toast('+'+n+' × '+k+' mg added ✓')}
+// take kits out of stock once when dispatched/delivered; put them back if cancelled or deleted
+function syncStock(o,removing){const out=!removing&&['Dispatched','Delivered'].includes(o.status);
+ if(out&&!o.stockOut){if(stockOf(kitKey(o))<(+o.qty||1))toast('Heads up: not enough '+o.strength+' in stock');setStock(kitKey(o),stockOf(kitKey(o))-(+o.qty||1));o.stockOut=true}
+ else if(!out&&o.stockOut){setStock(kitKey(o),stockOf(kitKey(o))+(+o.qty||1));o.stockOut=false}}
+function renderStock(){$('stock').innerHTML=['10','20','30'].map(k=>{const n=stockOf(k),low=n<=LOW;return `<div class="stat" style="text-align:center;${low?'border-color:#efcfd4;background:var(--red-l)':''}"><span class="small muted">${k} mg</span><b style="font-size:30px;${low?'color:var(--red)':''}">${n}</b><div class="small" style="min-height:18px;color:var(--red);font-weight:700">${n===0?'Out of stock':low?'Running low':''}</div><div class="row" style="justify-content:center;gap:6px;flex-wrap:nowrap"><button class="sm ghost" onclick="bumpStock('${k}',-1)" aria-label="One less ${k} mg">−</button><button class="sm ghost" onclick="bumpStock('${k}',1)" aria-label="One more ${k} mg">+</button></div></div>`}).join('')}
 // ---------- render
-function render(){for(const n of ['10','20','30'])if(document.activeElement!==$('price'+n))$('price'+n).value=db.prices[n]??'';
+function render(){renderStock();for(const n of ['10','20','30'])if(document.activeElement!==$('price'+n))$('price'+n).value=db.prices[n]??'';
  const month=iso().slice(0,7),live=db.orders.filter(o=>o.status!=='Cancelled'),thisMonth=live.filter(o=>(o.date||'').startsWith(month));
  const now=D(iso()),week=new Date(now.getTime()+7*864e5),soon=o=>o.reorder&&D(o.reorder)>=now&&D(o.reorder)<=week;
  $('stSales').textContent=fmt(thisMonth.reduce((a,o)=>a+(+o.total||0),0));$('stCollected').textContent=fmt(thisMonth.reduce((a,o)=>a+(+o.paid||0),0));
@@ -162,7 +177,7 @@ function download(name,body,type){const a=document.createElement('a');a.href=URL
 function exportJSON(){download('bliss-sales-backup-'+iso()+'.json',JSON.stringify(db,null,2),'application/json')}
 function exportCSV(){const qt=x=>'"'+String(x??'').replace(/"/g,'""')+'"';download('bliss-orders-'+iso()+'.csv','﻿'+[fields.join(','),...db.orders.map(o=>fields.map(c=>qt(o[c])).join(','))].join('\r\n'),'text/csv')}
 $('importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.orders)||typeof d.prices!=='object')throw 0;if(confirm('Replace all current orders with this backup?')){db=d;persist();toast('Backup restored ✓')}}catch(_){toast('That file isn’t a Sales Desk backup')}e.target.value=''});
-function erase(){if(confirm('Erase ALL orders and prices? Download a backup first if unsure.')&&confirm('Are you sure? This cannot be undone.')){db={prices:{},orders:[]};persist()}}
+function erase(){if(confirm('Erase ALL orders and prices? Download a backup first if unsure.')&&confirm('Are you sure? This cannot be undone.')){db={prices:{},orders:[],stock:{}};persist()}}
 // ---------- team (owner only)
 window.blissOnReady=()=>{if(window.blissUser&&blissUser.role==='owner'){$('teamCard').hidden=false;loadTeam()}};
 async function loadTeam(){try{const m=await blissTeam.list();$('teamList').innerHTML=m.map(x=>`<div class="todo row between"><div><b>${safe(x.name||(x.role==='owner'?'You':'Salesperson'))}</b> <span class="pill ${x.role==='owner'?'s-Paid':'s-Confirmed'}">${x.role==='owner'?'Owner':'Sales'}</span>${x.added_by?`<div class="small muted">Added by ${safe(x.added_by)}</div>`:''}</div>${x.role==='owner'?'':`<button class="sm ghost" onclick="removeMember('${safe(x.uid)}','${safe(x.name||'this person')}')">Remove</button>`}</div>`).join('')}catch(e){$('teamList').innerHTML='<p class="small muted">Couldn\u2019t load the team: '+safe(e.message)+'</p>'}}

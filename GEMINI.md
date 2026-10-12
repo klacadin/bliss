@@ -26,11 +26,13 @@ You are helping maintain **BLISS**, a small web app for a Philippine wellness bu
 1. **Client health data never goes to Firebase.** The Companion stores the plan, doses and check-ins in the browser's `localStorage` under key `bliss-companion-v1`, shape `{plan:{start,doseDay,dose,strength,clinician,contact,reason}, checkins:[{date,appetite,nausea,energy,water,weight,notes}], doses:[{date,mg,site}]}`. Do not add code that uploads, syncs or logs this data. Login on the Companion is only an access gate.
 2. **Sales data** lives in Firestore:
    - `bliss_admins/{uid}`: team list. `role: "owner"` (added by hand in the Console) or `role: "sales"` (added by the owner from the Sales Desk, with `name`, `added_by`, `added_at`).
-   - `bliss_sales/shared`: one shared document `{payload:{prices:{"10","20","30"}, orders:[...]}, updated_at, updated_by}`. Every team member reads and writes it; changes sync live via `onSnapshot`.
+   - `bliss_sales/shared`: one shared document `{payload:{prices:{"10","20","30"}, orders:[...], stock:{"10","20","30"}}, updated_at, updated_by}`. Every team member reads and writes it; changes sync live via `onSnapshot`.
    - `bliss_sales/{uid}`: legacy per-person record, read once to migrate into `shared`.
-   - Order fields: `date,status,name,mobile,location,strength,qty,needBy,reorder,total,paid,channel,notes,by`. Status flow: Inquiry → Confirmed → Paid → Dispatched → Delivered (or Cancelled).
+   - Order fields: `date,status,name,mobile,location,strength,qty,needBy,reorder,total,paid,channel,notes,by,stockOut`. Status flow: Inquiry → Confirmed → Paid → Dispatched → Delivered (or Cancelled).
 3. **Security rules:** only signed-in users **with verified email** who exist in `bliss_admins` can read/write `bliss_sales/shared`. Only the owner can create (`role:"sales"` only) or delete team members, and cannot delete themselves. Everything else is denied. Never loosen these rules, never allow a client to set its own role, and never put a service-account key or admin secret in the site.
-4. Sales Desk notes must not contain medical or treatment details.
+4. **Saving rule:** the Sales Desk keeps the whole payload in memory (`db`) and saves it all at once with `window.blissSaveSales(db)`. Any new field must be added to `db` and to `blissLoadSales`, or the next save will erase it. Do not write to `bliss_sales/shared` from separate code paths or transactions.
+5. **Stock:** `db.stock` holds kits on hand per strength. `syncStock(order)` deducts once when an order becomes Dispatched/Delivered (sets `stockOut:true`) and restores on cancel, edit or delete.
+6. Sales Desk notes must not contain medical or treatment details.
 
 ## Order hand-off format (must stay compatible)
 The Companion builds this text and the Sales Desk parses it line by line (`Label: value`). Do not rename the labels:
