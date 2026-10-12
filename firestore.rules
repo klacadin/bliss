@@ -1,16 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
     function isAdmin() {
-      return request.auth != null && request.auth.token.email_verified == true
-        && exists(/databases/$(database)/documents/bliss_admins/$(request.auth.uid));
+      return signedIn() && exists(/databases/$(database)/documents/bliss_admins/$(request.auth.uid));
     }
-    // Admin list: a user may only check their own entry. Add admins by hand in the Firebase Console.
+    function isOwner() {
+      return isAdmin() && get(/databases/$(database)/documents/bliss_admins/$(request.auth.uid)).data.role == 'owner';
+    }
+    // Team list. The owner is added by hand in the Firebase Console (role: "owner").
+    // The owner can add or remove salespeople (role: "sales") from the Sales Desk.
     match /bliss_admins/{uid} {
-      allow get: if request.auth != null && request.auth.uid == uid;
-      allow list, write: if false;
+      allow get: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isOwner() && request.resource.data.role == 'sales';
+      allow delete: if isOwner() && uid != request.auth.uid;
+      allow update: if false;
     }
-    // Sales Desk: one record per owner, admins only.
+    // One shared sales record for the whole team.
+    match /bliss_sales/shared {
+      allow read, write: if isAdmin();
+    }
+    // Older per-person record (read once to move it into the shared record).
     match /bliss_sales/{uid} {
       allow read, write: if isAdmin() && request.auth.uid == uid;
     }

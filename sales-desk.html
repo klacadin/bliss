@@ -46,6 +46,9 @@ dialog::backdrop{background:#1f2a2499}
   </div>
   <div>
    <div class="card"><h2>To do today</h2><p class="small muted">Messages to send. Tap Copy, then paste in SMS, Viber or Messenger.</p><div id="todo"></div></div>
+   <div class="card" id="teamCard" hidden><h2>Sales team</h2><p class="small muted">Everyone here sees and edits the same orders.</p><div id="teamList"></div>
+    <details><summary>Add a salesperson</summary><ol class="small" style="padding-left:18px;margin:8px 0"><li>Send them this link: <b>bliss-3f5b2.web.app/sales-desk</b></li><li>They tap <b>Create an account</b> and confirm their email.</li><li>They sign in, copy the code they see, and send it to you.</li></ol>
+    <label class="f">Their name<input id="tName" placeholder="e.g. Joy"></label><label class="f">Their code<input id="tUid" placeholder="Paste the code here" autocomplete="off"></label><button class="block" onclick="addMember()">Add to team</button></details></div>
    <div class="card"><h2>Kit prices</h2><p class="small muted">Used to fill in order totals automatically.</p>
     <div class="grid2" style="grid-template-columns:1fr 1fr 1fr"><label class="f">10 mg (₱)<input id="price10" type="number" inputmode="numeric" min="0"></label><label class="f">20 mg (₱)<input id="price20" type="number" inputmode="numeric" min="0"></label><label class="f">30 mg (₱)<input id="price30" type="number" inputmode="numeric" min="0"></label></div>
     <button class="block" onclick="savePrices()">Save prices</button></div>
@@ -99,7 +102,7 @@ async function persist(){render();const s=$('sync');
  s.textContent='Saving…';s.className='sync';
  try{await window.blissSaveSales(db);s.textContent='Saved ✓';s.className='sync'}
  catch(e){s.textContent='Not saved · tap to retry';s.className='sync err';s.onclick=persist;toast('Couldn’t save. Check your internet.')}}
-window.blissLoadSales=data=>{db={prices:data.prices||{},orders:Array.isArray(data.orders)?data.orders:[]};render()};
+window.blissLoadSales=(data,remote)=>{db={prices:data.prices||{},orders:Array.isArray(data.orders)?data.orders:[]};render()};
 
 // ---------- money helpers
 const balance=o=>Math.max(0,(+o.total||0)-(+o.paid||0));
@@ -122,7 +125,7 @@ function saveOrder(){const o={};['name','mobile','location','needBy','reorder','
  o.status=chipVal('status')||'Inquiry';o.strength=chipVal('strength')||'10 mg';o.channel=chipVal('channel')||'SMS';o.qty=+$('qty').value||1;o.total=+$('total').value||0;o.paid=+$('paid').value||0;
  if(!o.name){toast('Add the client’s name');return $('name').focus()}if(!o.mobile){toast('Add the mobile number');return $('mobile').focus()}
  if(o.total<0||o.paid<0)return toast('Amounts can’t be negative');
- if(!o.date)o.date=iso();if(!o.reorder)o.reorder=addDays(o.date,28*o.qty);
+ if(!o.date)o.date=iso();o.by=(window.blissUser&&blissUser.email)||'';if(!o.reorder)o.reorder=addDays(o.date,28*o.qty);
  if(editing===null)db.orders.push(o);else db.orders[editing]=o;closeOrder();persist();toast(editing===null?'Order added ✓':'Order updated ✓')}
 
 // ---------- quick actions
@@ -145,7 +148,7 @@ function render(){for(const n of ['10','20','30'])if(document.activeElement!==$(
  const q=$('q').value.trim().toLowerCase();
  const list=db.orders.map((o,i)=>({o,i})).filter(({o})=>filter==='all'||(filter==='open'&&!isDone(o))||(filter==='unpaid'&&o.status!=='Cancelled'&&balance(o)>0)||(filter==='done'&&isDone(o)))
   .filter(({o})=>!q||(o.name||'').toLowerCase().includes(q)||(o.mobile||'').includes(q)).sort((a,b)=>(b.o.date||'').localeCompare(a.o.date||''));
- $('orders').innerHTML=list.length?list.map(({o,i})=>{const n=nextStatus(o.status),bal=balance(o);return `<div class="order"><div class="top"><div><div class="name">${safe(o.name)}</div><div class="small muted">${safe(o.qty)} × ${safe(o.strength)} · ${nice(o.date)}${o.mobile?' · <a href="tel:'+safe(o.mobile)+'">'+safe(o.mobile)+'</a>':''}</div></div><span class="pill s-${safe(o.status)}">${safe(o.status)}</span></div>
+ $('orders').innerHTML=list.length?list.map(({o,i})=>{const n=nextStatus(o.status),bal=balance(o);return `<div class="order"><div class="top"><div><div class="name">${safe(o.name)}</div><div class="small muted">${safe(o.qty)} × ${safe(o.strength)} · ${nice(o.date)}${o.by?' · by '+safe(o.by.split('@')[0]):''}${o.mobile?' · <a href="tel:'+safe(o.mobile)+'">'+safe(o.mobile)+'</a>':''}</div></div><span class="pill s-${safe(o.status)}">${safe(o.status)}</span></div>
   <div class="money"><span>Total<b>${fmt(o.total)}</b></span><span>Paid<b>${fmt(o.paid)}</b></span><span>Balance<b class="${bal?'due':''}">${fmt(bal)}</b></span>${o.reorder&&o.status!=='Cancelled'?`<span>Reorder<b>${nice(o.reorder)}</b></span>`:''}</div>
   <div class="row">${n?`<button class="sm" onclick="advance(${i})">Mark ${n}</button>`:''}${bal&&o.status!=='Cancelled'?`<button class="sm ghost" onclick="markPaid(${i})">Paid in full</button>`:''}<button class="sm ghost" onclick="openOrder(${i})">Edit</button><button class="sm ghost" onclick="remove(${i})" aria-label="Delete">Delete</button></div></div>`}).join('')
   :`<div class="empty">${db.orders.length?'No orders here.':'No orders yet.<br><br><button onclick="openOrder()">＋ Add your first order</button>'}</div>`;
@@ -160,7 +163,13 @@ function exportJSON(){download('bliss-sales-backup-'+iso()+'.json',JSON.stringif
 function exportCSV(){const qt=x=>'"'+String(x??'').replace(/"/g,'""')+'"';download('bliss-orders-'+iso()+'.csv','﻿'+[fields.join(','),...db.orders.map(o=>fields.map(c=>qt(o[c])).join(','))].join('\r\n'),'text/csv')}
 $('importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.orders)||typeof d.prices!=='object')throw 0;if(confirm('Replace all current orders with this backup?')){db=d;persist();toast('Backup restored ✓')}}catch(_){toast('That file isn’t a Sales Desk backup')}e.target.value=''});
 function erase(){if(confirm('Erase ALL orders and prices? Download a backup first if unsure.')&&confirm('Are you sure? This cannot be undone.')){db={prices:{},orders:[]};persist()}}
+// ---------- team (owner only)
+window.blissOnReady=()=>{if(window.blissUser&&blissUser.role==='owner'){$('teamCard').hidden=false;loadTeam()}};
+async function loadTeam(){try{const m=await blissTeam.list();$('teamList').innerHTML=m.map(x=>`<div class="todo row between"><div><b>${safe(x.name||(x.role==='owner'?'You':'Salesperson'))}</b> <span class="pill ${x.role==='owner'?'s-Paid':'s-Confirmed'}">${x.role==='owner'?'Owner':'Sales'}</span>${x.added_by?`<div class="small muted">Added by ${safe(x.added_by)}</div>`:''}</div>${x.role==='owner'?'':`<button class="sm ghost" onclick="removeMember('${safe(x.uid)}','${safe(x.name||'this person')}')">Remove</button>`}</div>`).join('')}catch(e){$('teamList').innerHTML='<p class="small muted">Couldn\u2019t load the team: '+safe(e.message)+'</p>'}}
+async function addMember(){const uid=$('tUid').value.trim(),name=$('tName').value.trim();if(!name)return toast('Add their name');if(!/^[A-Za-z0-9]{20,40}$/.test(uid))return toast('That code doesn\u2019t look right. Ask them to copy it again.');
+ try{await blissTeam.add(uid,name);$('tUid').value='';$('tName').value='';toast(name+' added ✓ They can sign in now.');loadTeam()}catch(e){toast('Couldn\u2019t add: '+e.message)}}
+async function removeMember(uid,name){if(!confirm('Remove '+name+' from the sales team? They will lose access right away.'))return;try{await blissTeam.remove(uid);toast(name+' removed');loadTeam()}catch(e){toast('Couldn\u2019t remove: '+e.message)}}
 render();
 </script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="config.js?v=3"></script><script src="auth.js?v=3"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="config.js?v=4"></script><script src="auth.js?v=4"></script>
 </body></html>

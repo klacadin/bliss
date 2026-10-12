@@ -1,14 +1,133 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#3e6657"><title>BLISS · Take charge of your body</title><link rel="icon" href="assets/flower.webp"><link rel="stylesheet" href="bliss.css?v=3"><style>
-body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,#e6efe8,#f7e9ee)}
-main{max-width:420px;width:100%;padding:24px 16px;text-align:center}
-.logo{width:120px}
-h1{color:var(--green);letter-spacing:.14em;font-size:40px}
-.owner{display:block;margin-top:28px;font-size:13px;color:var(--muted)}
-</style></head><body><main>
-<img class="logo" src="assets/flower.webp" alt="">
-<h1>BLISS</h1>
-<p class="muted" style="font-size:18px;margin-bottom:24px">Take charge of your body,<br>one day at a time.</p>
-<a class="btn big block" href="companion.html">Open my companion</a>
-<p class="small muted" style="margin-top:12px">Track doses, check in daily, and order your next kit.</p>
-<a class="owner" href="sales-desk.html">BLISS owner? Sales Desk →</a>
-</main></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#3e6657"><title>BLISS · Take charge of your body</title><meta name="description" content="BLISS: your companion for tracking doses, daily check-ins and ordering your next kit."><link rel="icon" href="assets/flower.webp"><link rel="stylesheet" href="bliss.css?v=4"><style>
+body{overflow-x:hidden;background:#f6f4ef}
+/* drifting colour blobs */
+.sky{position:fixed;inset:0;z-index:-1;overflow:hidden;background:linear-gradient(160deg,#eef3ec,#f8eef1 60%,#f6f4ef)}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;animation:drift 22s ease-in-out infinite alternate}
+.b1{width:420px;height:420px;background:#c9ddcf;top:-120px;left:-100px}
+.b2{width:360px;height:360px;background:#f0c9d6;top:30%;right:-120px;animation-duration:26s;animation-delay:-6s}
+.b3{width:300px;height:300px;background:#efe0c4;bottom:-80px;left:20%;animation-duration:30s;animation-delay:-12s}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,40px) scale(1.12)}100%{transform:translate(-40px,80px) scale(.95)}}
+/* floating petals */
+.petal{position:fixed;top:-30px;width:14px;height:20px;background:radial-gradient(circle at 30% 30%,#f7d3df,#d895ac);border-radius:80% 0 80% 0;opacity:.7;z-index:0;pointer-events:none;animation:fall linear infinite}
+@keyframes fall{0%{transform:translateY(-40px) rotate(0)}100%{transform:translateY(110vh) translateX(var(--sway)) rotate(540deg)}}
+nav.top{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto;padding:14px 18px;position:relative;z-index:2}
+nav.top .brand img{background:#fff;border-radius:50%;padding:3px}
+/* hero */
+.hero{max-width:1100px;margin:0 auto;padding:30px 18px 70px;display:grid;grid-template-columns:1.1fr .9fr;gap:30px;align-items:center;position:relative;z-index:1;min-height:calc(100vh - 80px)}
+@media(max-width:820px){.hero{grid-template-columns:1fr;text-align:center;padding-top:10px;min-height:auto}}
+.hero h1{font-size:clamp(40px,7vw,72px);line-height:1.05;color:#26302b}
+.hero h1 em{font-style:italic;color:var(--green);display:inline-block}
+.hero p.lead{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:30em;margin:18px 0 28px}
+@media(max-width:820px){.hero p.lead{margin:16px auto 24px}}
+.ctas{display:flex;gap:12px;flex-wrap:wrap}
+@media(max-width:820px){.ctas{justify-content:center}}
+.ctas .btn{min-height:58px;font-size:17px;padding:0 28px;border-radius:16px}
+.btn.glow{box-shadow:0 10px 30px #3e665744;position:relative;overflow:hidden}
+.btn.glow::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,#ffffff55 50%,transparent 70%);transform:translateX(-100%);animation:shine 3.5s ease-in-out infinite 1.5s}
+@keyframes shine{0%{transform:translateX(-100%)}40%,100%{transform:translateX(100%)}}
+/* flower stage */
+.stage{position:relative;aspect-ratio:1;max-width:440px;width:100%;margin:0 auto}
+.ring{position:absolute;inset:0;border-radius:50%;border:1.5px dashed #3e665733;animation:spin 60s linear infinite}
+.ring.r2{inset:12%;border-color:#a8607a33;animation-duration:45s;animation-direction:reverse}
+.ring.r3{inset:24%;border:0;background:radial-gradient(circle,#ffffffcc,#ffffff00 70%)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.flower{position:absolute;inset:22%;width:56%;height:56%;object-fit:contain;background:#fff;border-radius:50%;padding:7%;box-shadow:0 20px 50px #a8607a22;animation:bloom 1.6s cubic-bezier(.2,.9,.3,1.2) both,breathe 6s ease-in-out 1.6s infinite}
+@keyframes bloom{from{transform:scale(.2) rotate(-90deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.orbit{position:absolute;inset:0;animation:spin 40s linear infinite}
+.chip{position:absolute;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;box-shadow:0 8px 24px #2a3a3015;white-space:nowrap;animation:spin 40s linear infinite reverse}
+.stage{max-width:min(440px,78vw)}@media(max-width:560px){.chip{font-size:12px;padding:6px 10px}}.chip.c1{top:2%;left:50%;margin-left:-60px}.chip.c2{top:62%;left:0}.chip.c3{top:62%;right:0}
+/* reveal */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+.reveal.in{opacity:1;transform:none}
+.d1{transition-delay:.12s}.d2{transition-delay:.24s}.d3{transition-delay:.36s}
+.hero .reveal{animation:up .9s cubic-bezier(.2,.8,.2,1) both}
+.hero .reveal.d1{animation-delay:.15s}.hero .reveal.d2{animation-delay:.3s}.hero .reveal.d3{animation-delay:.45s}
+@keyframes up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+/* sections */
+section.s{max-width:1100px;margin:0 auto;padding:60px 18px;position:relative;z-index:1}
+.s h2{font-size:clamp(28px,4vw,40px);text-align:center;margin-bottom:8px}
+.s .sub{text-align:center;color:var(--muted);max-width:34em;margin:0 auto 36px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:820px){.steps{grid-template-columns:1fr}}
+.step{background:#ffffffcc;backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:24px;padding:24px;text-align:center;transition:transform .3s,box-shadow .3s}
+.step:hover{transform:translateY(-6px);box-shadow:0 18px 40px #2a3a3018}
+.step img{width:130px;height:130px;object-fit:cover;object-position:center bottom;mix-blend-mode:multiply;border-radius:50%;background:#f6f4ef}
+.step .n{display:inline-flex;width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;align-items:center;justify-content:center;font-weight:800;margin:10px 0 6px}
+.step h3{font-size:21px;margin-bottom:6px}
+.step p{color:var(--muted);font-size:15px}
+.kitrow{display:flex;gap:12px;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.track{display:flex;gap:12px;animation:marquee 28s linear infinite;flex-shrink:0}
+.kitrow:hover .track{animation-play-state:paused}
+@keyframes marquee{to{transform:translateX(calc(-100% - 12px))}}
+.item{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 20px;white-space:nowrap;font-weight:700}
+.item span{display:block;font-weight:400;font-size:13px;color:var(--muted)}
+.final{background:linear-gradient(130deg,#3e6657,#2f5145);color:#fff;border-radius:32px;padding:50px 24px;text-align:center;overflow:hidden;position:relative}
+.final h2{color:#fff}
+.final p{color:#dbe8df;margin:10px auto 26px;max-width:28em}
+.final .btn{background:#fff;color:var(--green);min-height:58px;font-size:17px;padding:0 30px;border-radius:16px}
+.final .btn.ghost{background:#ffffff22;color:#fff}
+.final::before{content:"";position:absolute;width:300px;height:300px;border-radius:50%;background:#ffffff14;top:-120px;right:-80px;animation:drift 18s ease-in-out infinite alternate}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 18px 40px;max-width:640px;margin:0 auto;position:relative;z-index:1}
+footer a{color:var(--muted)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}.petal{display:none}}
+</style></head><body>
+<div class="sky"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<nav class="top"><a class="brand" href="#"><img src="assets/flower.webp" alt=""><span>BLISS</span></a><a class="btn sm ghost" href="companion.html">Sign in</a></nav>
+
+<header class="hero">
+ <div>
+  <div class="eyebrow reveal">Your wellness companion</div>
+  <h1 class="reveal d1">Take charge of<br>your body, <em>gently.</em></h1>
+  <p class="lead reveal d2">Remember every dose, check in with yourself in seconds, and order your next kit without the back-and-forth. One day at a time.</p>
+  <div class="ctas reveal d3"><a class="btn glow" href="companion.html">Start my companion</a><a class="btn ghost" href="companion.html#order" onclick="sessionStorage.setItem('bliss-open','order')">Order a kit</a></div>
+ </div>
+ <div class="stage reveal d2" aria-hidden="true">
+  <div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div>
+  <img class="flower" src="assets/flower.webp" alt="">
+  <div class="orbit"><span class="chip c1">💉 Dose reminders</span><span class="chip c2">🌿 Daily check-ins</span><span class="chip c3">📦 Easy reorders</span></div>
+ </div>
+</header>
+
+<section class="s">
+ <h2 class="reveal">Three taps a day. That's it.</h2>
+ <p class="sub reveal d1">Made to be simple, so you can focus on how you feel.</p>
+ <div class="steps">
+  <div class="step reveal"><img src="assets/journal.webp" alt=""><div class="n">1</div><h3>Set your plan</h3><p>Enter the dose your doctor prescribed and your injection day. It takes 30 seconds.</p></div>
+  <div class="step reveal d1"><img src="assets/rest.webp" alt=""><div class="n">2</div><h3>Check in daily</h3><p>Tap how your appetite, nausea and energy feel. Log your dose with one button.</p></div>
+  <div class="step reveal d2"><img src="assets/friends.webp" alt=""><div class="n">3</div><h3>Stay supported</h3><p>Share a summary with your doctor and order your next kit by text in seconds.</p></div>
+ </div>
+</section>
+
+<section class="s">
+ <h2 class="reveal">What's in your kit</h2>
+ <p class="sub reveal d1">Everything packed together, with a guide and tracker booklet.</p>
+ <div class="kitrow reveal d2">
+  <div class="track"><div class="item">Tirze vial<span>10, 20 or 30 mg</span></div><div class="item">Bacteriostatic water<span>Prepare as your pharmacist instructs</span></div><div class="item">Alcohol pads<span>For cleaning</span></div><div class="item">Syringes<span>1 prep + 5 single-use</span></div><div class="item">Mini flask<span>Vial holder</span></div><div class="item">BLISS booklet<span>Guide &amp; tracker</span></div></div>
+  <div class="track" aria-hidden="true"><div class="item">Tirze vial<span>10, 20 or 30 mg</span></div><div class="item">Bacteriostatic water<span>Prepare as your pharmacist instructs</span></div><div class="item">Alcohol pads<span>For cleaning</span></div><div class="item">Syringes<span>1 prep + 5 single-use</span></div><div class="item">Mini flask<span>Vial holder</span></div><div class="item">BLISS booklet<span>Guide &amp; tracker</span></div></div>
+ </div>
+</section>
+
+<section class="s">
+ <div class="final reveal">
+  <h2>Your private journal, on your phone</h2>
+  <p>Your health notes stay on your own device. They are never sent to BLISS.</p>
+  <div class="ctas" style="justify-content:center"><a class="btn" href="companion.html">Open my companion</a><a class="btn ghost" href="sms:+639176358505">Text us</a></div>
+ </div>
+</section>
+
+<footer>
+ <p>BLISS helps you keep track. It is not a diagnosis, prescription or dosing advice. Use only medicine prescribed and dispensed through proper clinical channels.</p>
+ <p style="margin-top:14px">+63 917 635 8505 · clevergritph@gmail.com · <a href="sales-desk.html">Team sign-in</a></p>
+</footer>
+
+<script>
+// scroll reveal
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.15});
+document.querySelectorAll('section .reveal').forEach(el=>io.observe(el));
+document.querySelectorAll('.hero .reveal').forEach(el=>el.classList.add('in'));
+// petals
+if(!matchMedia('(prefers-reduced-motion: reduce)').matches){for(let i=0;i<12;i++){const p=document.createElement('div');p.className='petal';p.style.left=Math.random()*100+'vw';p.style.setProperty('--sway',(Math.random()*160-80)+'px');p.style.animationDuration=(10+Math.random()*12)+'s';p.style.animationDelay=(-Math.random()*20)+'s';p.style.transform='scale('+(.6+Math.random()*.7)+')';document.body.appendChild(p)}}
+</script>
+</body></html>

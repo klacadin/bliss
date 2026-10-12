@@ -27,10 +27,25 @@
   if(!user){gate.hidden=false;bar.hidden=true;return;}
   if(!user.emailVerified){pendingUser=user;gate.hidden=false;bar.hidden=true;setMode('verify');pendingUser=user;say('We sent a link to '+user.email+'. Open it, then tap the button below.','ok');return;}
   if(isAdminPage){
-   try{const adm=await fs.collection('bliss_admins').doc(user.uid).get();if(!adm.exists)throw 0;}
-   catch(e){gate.hidden=false;bar.hidden=true;say('This account doesn’t have Sales Desk access.');await auth.signOut();return;}
-   try{const snap=await fs.collection('bliss_sales').doc(user.uid).get();if(snap.exists&&snap.data().payload&&window.blissLoadSales)window.blissLoadSales(snap.data().payload);}catch(e){say('Couldn’t load your records: '+e.message);return;}
-   window.blissSaveSales=data=>fs.collection('bliss_sales').doc(user.uid).set({payload:data,updated_at:firebase.firestore.FieldValue.serverTimestamp()});
+   let adm;
+   try{adm=await fs.collection('bliss_admins').doc(user.uid).get();}catch(e){adm=null}
+   if(!adm||!adm.exists){gate.hidden=false;bar.hidden=true;setMode('signin');
+    say('You\u2019re signed in, but not on the BLISS sales team yet. Send this code to the owner so they can add you:','ok');
+    msg.insertAdjacentHTML('beforeend','<div style="margin-top:8px;display:flex;gap:6px"><input readonly value="'+user.uid+'" style="font-size:13px;min-height:40px" onclick="this.select()"><button type="button" class="sm" onclick="navigator.clipboard.writeText(\''+user.uid+'\').then(()=>this.textContent=\'Copied \u2713\')">Copy</button></div><button type="button" class="link" onclick="blissSignOut()" style="margin-top:6px">Sign out</button>');
+    return;}
+   const role=adm.data().role||'owner',shared=fs.collection('bliss_sales').doc('shared');
+   try{let snap=await shared.get(),data=snap.exists?snap.data().payload:null;
+    if(!data){const old=await fs.collection('bliss_sales').doc(user.uid).get();if(old.exists&&old.data().payload){data=old.data().payload;await shared.set({payload:data,updated_at:firebase.firestore.FieldValue.serverTimestamp(),updated_by:user.email})}}
+    if(data&&window.blissLoadSales)window.blissLoadSales(data);
+    shared.onSnapshot(s=>{if(!s.metadata.hasPendingWrites&&s.exists&&window.blissLoadSales)window.blissLoadSales(s.data().payload,true)});
+   }catch(e){say('Couldn\u2019t load the sales records: '+e.message);return;}
+   window.blissSaveSales=data=>shared.set({payload:data,updated_at:firebase.firestore.FieldValue.serverTimestamp(),updated_by:user.email});
+   window.blissUser={uid:user.uid,email:user.email,role};
+   window.blissTeam={
+    list:async()=>(await fs.collection('bliss_admins').get()).docs.map(d=>({uid:d.id,...d.data()})),
+    add:(uid,name)=>fs.collection('bliss_admins').doc(uid).set({role:'sales',name:name||'',added_by:user.email,added_at:firebase.firestore.FieldValue.serverTimestamp()}),
+    remove:uid=>fs.collection('bliss_admins').doc(uid).delete()};
+   if(window.blissOnReady)window.blissOnReady();
   }
   gate.hidden=true;bar.hidden=false;$('userEmail').textContent=user.email||'';say('');
  }

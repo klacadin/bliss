@@ -22,3 +22,8 @@ Two separate pages: `/companion.html` (client), `/sales-desk.html` (owner only).
 You can inspect the design by opening `index.html`, but until Firebase is configured, protected content stays locked. For testing, serve via HTTPS or a local dev server; some browser login redirects will not work from `file://`.
 
 `schema.sql` is the old Supabase setup and is no longer used.
+
+## Sales team accounts
+- The owner's `bliss_admins` document must have the field `role` = `owner`.
+- To add a salesperson: they open `/sales-desk`, create an account, confirm their email, sign in and copy the code shown. The owner pastes the code in **Sales team → Add a salesperson**.
+- Everyone on the team works on one shared record (`bliss_sales/shared`). The owner can remove a salesperson at any time.
